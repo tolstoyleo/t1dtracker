@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.FilterChip
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,11 +54,15 @@ fun MainApp(modifier: Modifier = Modifier) {
             EditEntryScreen(
                 entry = editingEntry!!,
                 onBack = {
+                    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
                     editingEntry = null
+                    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
                     selectedButton = "History" // Go back to history, not main menu
                 },
                 onSave = {
+                    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
                     editingEntry = null
+                    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
                     selectedButton = "History" // Go back to history after save/delete
                 }
             )
@@ -108,17 +113,31 @@ fun MainScreen(modifier: Modifier = Modifier, onButtonClick: (String) -> Unit) {
 
 @Composable
 fun BigButton(text: String, onClick: () -> Unit) {
+    val style = getCategoryStyle(text)
+
     Button(
         onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = style.color
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .height(100.dp)
     ) {
-        Text(
-            text = text,
-            fontSize = 24.sp
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = style.icon,
+                fontSize = 32.sp
+            )
+            Text(
+                text = text,
+                fontSize = 24.sp
+            )
+        }
     }
 }
 
@@ -294,35 +313,51 @@ fun TimelineScreen(
 
 @Composable
 fun EntryCard(entry: TimelineEntry, onClick: () -> Unit) {
+    val style = getCategoryStyle(entry.type)
+
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = style.color.copy(alpha = 0.2f) // Light tint
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Entry type
+            // Icon
             Text(
-                text = entry.type,
-                fontSize = 20.sp,
-                style = MaterialTheme.typography.titleMedium
+                text = style.icon,
+                fontSize = 32.sp,
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
 
-            // Date and time
-            Text(
-                text = "${formatDate(entry.dateMillis)} at ${formatTime(entry.hour, entry.minute)}",                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
-            // Notes (if any)
-            if (entry.notes.isNotEmpty()) {
+            Column {
+                // Entry type
                 Text(
-                    text = "Notes: ${entry.notes}",
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(top = 8.dp)
+                    text = entry.type,
+                    fontSize = 20.sp,
+                    style = MaterialTheme.typography.titleMedium
                 )
+
+                // Date and time
+                Text(
+                    text = "${formatDate(entry.dateMillis)} at ${formatTime(entry.hour, entry.minute)}",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                // Notes (if any)
+                if (entry.notes.isNotEmpty()) {
+                    Text(
+                        text = "Notes: ${entry.notes}",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         }
     }
@@ -378,7 +413,11 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Date: ${formatDate(datePickerState.selectedDateMillis)}",
+                text = "Date: ${run {
+                    val pickerCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                    pickerCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
+                    "${pickerCal.get(Calendar.MONTH) + 1}/${pickerCal.get(Calendar.DAY_OF_MONTH)}/${pickerCal.get(Calendar.YEAR)}"
+                }}",
                 fontSize = 18.sp
             )
         }
@@ -424,9 +463,22 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
                     if (!isSubmitted) {
                         isSubmitted = true
                         scope.launch {
+                            val selectedCal = Calendar.getInstance()
+                            selectedCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
+
+                            // Create a new calendar with the selected date and current time
+                            val finalCal = Calendar.getInstance()
+                            finalCal.set(Calendar.YEAR, selectedCal.get(Calendar.YEAR))
+                            finalCal.set(Calendar.MONTH, selectedCal.get(Calendar.MONTH))
+                            finalCal.set(Calendar.DAY_OF_MONTH, selectedCal.get(Calendar.DAY_OF_MONTH))
+                            finalCal.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                            finalCal.set(Calendar.MINUTE, timePickerState.minute)
+                            finalCal.set(Calendar.SECOND, 0)
+                            finalCal.set(Calendar.MILLISECOND, 0)
+
                             dataStoreManager.saveEntry(
                                 entryType = title,
-                                dateMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis(),
+                                dateMillis = finalCal.timeInMillis,
                                 hour = timePickerState.hour,
                                 minute = timePickerState.minute,
                                 notes = notes
@@ -492,6 +544,21 @@ fun formatDate(millis: Long?): String {
     return "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.YEAR)}"
 }
 
+data class CategoryStyle(
+    val color: Color,
+    val icon: String
+)
+
+fun getCategoryStyle(type: String): CategoryStyle {
+    return when (type) {
+        "Short Acting" -> CategoryStyle(Color(0xFFFFB74D), "💉") // Orange
+        "Long Acting" -> CategoryStyle(Color(0xFFBA68C8), "💉") // Purple
+        "Glucose" -> CategoryStyle(Color(0xFFE57373), "🩸") // Red
+        "Food" -> CategoryStyle(Color(0xFF81C784), "🍽️") // Green
+        "Exercise" -> CategoryStyle(Color(0xFF64B5F6), "🏃") // Blue
+        else -> CategoryStyle(Color(0xFFBDBDBD), "📝") // Gray default
+    }
+}
 fun formatTime(hour: Int, minute: Int): String {
     val amPm = if (hour < 12) "AM" else "PM"
     val displayHour = when {
@@ -543,7 +610,11 @@ fun EditEntryScreen(entry: TimelineEntry, onBack: () -> Unit, onSave: () -> Unit
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Date: ${formatDate(datePickerState.selectedDateMillis)}",
+                text = "Date: ${run {
+                    val pickerCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                    pickerCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
+                    "${pickerCal.get(Calendar.MONTH) + 1}/${pickerCal.get(Calendar.DAY_OF_MONTH)}/${pickerCal.get(Calendar.YEAR)}"
+                }}",
                 fontSize = 18.sp
             )
         }
