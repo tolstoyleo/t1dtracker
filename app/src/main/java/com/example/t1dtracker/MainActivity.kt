@@ -1,4 +1,4 @@
-package com.example.t1dtracker
+package com.tolstoyleo.t1dtracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,6 +21,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.LaunchedEffect
 import org.json.JSONArray
@@ -79,6 +82,12 @@ fun MainApp(modifier: Modifier = Modifier) {
                 onFilterChange = { filter -> historyFilter = filter }
             )
         }
+
+        selectedButton == "About" -> {
+            // Show about screen
+            AboutScreen(onBack = { selectedButton = null })
+        }
+
         selectedButton != null -> {
             // Show date picker screen for new entry
             DatePickerScreen(
@@ -107,7 +116,38 @@ fun MainScreen(modifier: Modifier = Modifier, onButtonClick: (String) -> Unit) {
         BigButton(text = "Glucose", onClick = { onButtonClick("Glucose") })
         BigButton(text = "Food", onClick = { onButtonClick("Food") })
         BigButton(text = "Exercise", onClick = { onButtonClick("Exercise") })
-        BigButton(text = "History", onClick = { onButtonClick("History") })
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(100.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { onButtonClick("History") },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                Text("History", fontSize = 20.sp)
+            }
+
+            Button(
+                onClick = { onButtonClick("About") },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                Text("About", fontSize = 20.sp)
+            }
+        }
     }
 }
 
@@ -770,5 +810,135 @@ fun EditEntryScreen(entry: TimelineEntry, onBack: () -> Unit, onSave: () -> Unit
 fun MainScreenPreview() {
     T1DTrackerTheme {
         MainScreen(onButtonClick = {})
+    }
+}
+
+@Composable
+fun AboutScreen(onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Title
+        Text(
+            text = "About T1D Tracker",
+            fontSize = 32.sp,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // App info
+            Text(
+                text = "Version 1.0",
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Description
+            Text(
+                text = "A simple, privacy-focused diabetes tracking app for logging insulin, glucose readings, meals, and exercise.",
+                fontSize = 16.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            // Developer info
+            Text(
+                text = "Developed by:",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "Matthew Day",
+                fontSize = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            // GitHub link
+            Button(
+                onClick = {
+                    val intent = android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://github.com/tolstoyleo/t1dtracker")
+                    )
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text("View on GitHub", fontSize = 18.sp)
+            }
+
+            // License info
+            Text(
+                text = "Licensed under MIT License",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            // Buy me a coffee
+            Text(
+                text = "Enjoying this app?",
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Button(
+                onClick = {
+                    val intent = android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://buymeacoffee.com/matthewday")
+                    )
+                    context.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFDD00)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text("☕ Buy Me a Coffee", fontSize = 18.sp, color = Color.Black)
+            }
+
+            // Privacy note
+            Text(
+                text = "All data is stored locally on your device. This app does not collect or transmit any personal information.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 24.dp)
+            )
+        }
+
+        // Back button
+        Button(
+            onClick = onBack,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 80.dp)
+                .height(60.dp)
+        ) {
+            Text("Back", fontSize = 20.sp)
+        }
     }
 }

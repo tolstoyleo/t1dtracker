@@ -32,3 +32,8 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# my own closed tester list
+closedtesters.csv
+
+app/.DS_Store

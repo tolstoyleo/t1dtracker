@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.t1dtracker"
+    namespace = "com.tolstoyleo.t1dtracker"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.t1dtracker"
+        applicationId = "com.tolstoyleo.t1dtracker"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

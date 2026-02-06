@@ -1,4 +1,4 @@
-package com.example.t1dtracker
+package com.tolstoyleo.t1dtracker
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
