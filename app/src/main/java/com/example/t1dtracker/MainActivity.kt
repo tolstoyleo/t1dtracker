@@ -27,8 +27,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.LaunchedEffect
 import org.json.JSONArray
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.LocalTime
+import java.time.ZonedDateTime
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.t1dtracker.ui.theme.T1DTrackerTheme
+import java.time.ZoneOffset
 import java.util.*
 
 class MainActivity : ComponentActivity() {
@@ -419,8 +425,15 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val dataStoreManager = remember { DataStoreManager(context) }
 
+    val todayLocalMidnightMillis = remember {
+        LocalDate.now()
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+    }
+
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis()
+        initialSelectedDateMillis = todayLocalMidnightMillis
     )
 
     val currentTime = Calendar.getInstance()
@@ -452,12 +465,18 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth()
         ) {
+            val localDate = datePickerState.selectedDateMillis?.let {
+                Instant.ofEpochMilli(it)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+            }
+
             Text(
-                text = "Date: ${run {
-                    val pickerCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-                    pickerCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
-                    "${pickerCal.get(Calendar.MONTH) + 1}/${pickerCal.get(Calendar.DAY_OF_MONTH)}/${pickerCal.get(Calendar.YEAR)}"
-                }}",
+                text = "Date: ${
+                    localDate?.let {
+                        "${it.monthValue}/${it.dayOfMonth}/${it.year}"
+                    } ?: ""
+                }",
                 fontSize = 18.sp
             )
         }
@@ -503,27 +522,33 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
                     if (!isSubmitted) {
                         isSubmitted = true
                         scope.launch {
-                            val selectedCal = Calendar.getInstance()
-                            selectedCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
+                            val localDate = datePickerState.selectedDateMillis?.let {
+                                Instant.ofEpochMilli(it)
+                                    .atZone(ZoneOffset.UTC)
+                                    .toLocalDate()
+                            } ?: LocalDate.now()
 
-                            // Create a new calendar with the selected date and current time
-                            val finalCal = Calendar.getInstance()
-                            finalCal.set(Calendar.YEAR, selectedCal.get(Calendar.YEAR))
-                            finalCal.set(Calendar.MONTH, selectedCal.get(Calendar.MONTH))
-                            finalCal.set(Calendar.DAY_OF_MONTH, selectedCal.get(Calendar.DAY_OF_MONTH))
-                            finalCal.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                            finalCal.set(Calendar.MINUTE, timePickerState.minute)
-                            finalCal.set(Calendar.SECOND, 0)
-                            finalCal.set(Calendar.MILLISECOND, 0)
+                            val localTime = LocalTime.of(
+                                timePickerState.hour,
+                                timePickerState.minute
+                            )
+
+                            val finalMillis = ZonedDateTime.of(
+                                localDate,
+                                localTime,
+                                ZoneId.systemDefault()
+                            ).toInstant().toEpochMilli()
 
                             dataStoreManager.saveEntry(
                                 entryType = title,
-                                dateMillis = finalCal.timeInMillis,
+                                dateMillis = finalMillis,
                                 hour = timePickerState.hour,
                                 minute = timePickerState.minute,
                                 notes = notes
                             )
+
                             Toast.makeText(context, "Entry saved!", Toast.LENGTH_SHORT).show()
+
                         }
                     }
                 },
@@ -579,9 +604,12 @@ fun DatePickerScreen(title: String, onBack: () -> Unit) {
 
 fun formatDate(millis: Long?): String {
     if (millis == null) return "Select date"
-    val calendar = Calendar.getInstance()
-    calendar.timeInMillis = millis
-    return "${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.YEAR)}"
+
+    val localDate = Instant.ofEpochMilli(millis)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+
+    return "${localDate.monthValue}/${localDate.dayOfMonth}/${localDate.year}"
 }
 
 data class CategoryStyle(
@@ -649,12 +677,18 @@ fun EditEntryScreen(entry: TimelineEntry, onBack: () -> Unit, onSave: () -> Unit
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth()
         ) {
+            val localDate = datePickerState.selectedDateMillis?.let {
+                Instant.ofEpochMilli(it)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+            }
+
             Text(
-                text = "Date: ${run {
-                    val pickerCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-                    pickerCal.timeInMillis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
-                    "${pickerCal.get(Calendar.MONTH) + 1}/${pickerCal.get(Calendar.DAY_OF_MONTH)}/${pickerCal.get(Calendar.YEAR)}"
-                }}",
+                text = "Date: ${
+                    localDate?.let {
+                        "${it.monthValue}/${it.dayOfMonth}/${it.year}"
+                    } ?: ""
+                }",
                 fontSize = 18.sp
             )
         }
